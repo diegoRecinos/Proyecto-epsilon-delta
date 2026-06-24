@@ -12,7 +12,6 @@ IF OBJECT_ID('dbo.Dim_SalesTerritory', 'U') IS NOT NULL DROP TABLE dbo.Dim_Sales
 GO
 
 
-
 -- CREACIÓN DE LAS TABLAS DEL MODELO 
 
 
