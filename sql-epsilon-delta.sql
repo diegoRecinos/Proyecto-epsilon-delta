@@ -52,27 +52,7 @@ WHERE ps.Name IS NOT NULL;
 
 --marcelo reyes
 
--- 4. Dimensión Reseller
-SELECT
-    s.BusinessEntityID AS ResellerKey,
-    s.BusinessEntityID AS ResellerID,
-    'Reseller' AS BusinessType,
-    s.Name AS Reseller,
-    a.City,
-    sp.Name AS StateProvince,
-    cr.Name AS CountryRegion,
-    a.PostalCode
-FROM Sales.Store s
-INNER JOIN Person.BusinessEntityAddress bea
-    ON s.BusinessEntityID = bea.BusinessEntityID
-INNER JOIN Person.Address a
-    ON bea.AddressID = a.AddressID
-INNER JOIN Person.StateProvince sp
-    ON a.StateProvinceID = sp.StateProvinceID
-INNER JOIN Person.CountryRegion cr
-    ON sp.CountryRegionCode = cr.CountryRegionCode;
-
---5. Tabla de hechos Fact Sales
+--4. Tabla de hechos Fact Sales
 SELECT
     sod.SalesOrderDetailID AS SalesOrderLineKey,
     c.CustomerID AS ResellerKey,
@@ -102,6 +82,28 @@ INNER JOIN Sales.Customer c
     ON soh.CustomerID = c.CustomerID
 INNER JOIN Sales.SalesTerritory st
     ON soh.TerritoryID = st.TerritoryID;
+
+-- 5. Dimensión Reseller
+SELECT
+    s.BusinessEntityID AS ResellerKey,
+    s.BusinessEntityID AS ResellerID,
+    'Reseller' AS BusinessType,
+    s.Name AS Reseller,
+    a.City,
+    sp.Name AS StateProvince,
+    cr.Name AS CountryRegion,
+    a.PostalCode
+FROM Sales.Store s
+INNER JOIN Person.BusinessEntityAddress bea
+    ON s.BusinessEntityID = bea.BusinessEntityID
+INNER JOIN Person.Address a
+    ON bea.AddressID = a.AddressID
+INNER JOIN Person.StateProvince sp
+    ON a.StateProvinceID = sp.StateProvinceID
+INNER JOIN Person.CountryRegion cr
+    ON sp.CountryRegionCode = cr.CountryRegionCode;
+
+
 
 ---------------------------------
 -- Querys consultas y analisis
