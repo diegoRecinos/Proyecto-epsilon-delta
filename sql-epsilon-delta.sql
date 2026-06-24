@@ -1,8 +1,12 @@
 USE AdventureWorks2022; 
 GO
 --diego recinos
--- 1. Poblar Dim_SalesTerritory
-INSERT INTO Dim_SalesTerritory (TerritoryID, Region, CountryRegion, [Group])
+
+--------------------
+--Modelo dimensional
+--------------------
+
+-- 1. dimension SalesTerritory
 SELECT 
     TerritoryID,
     Name AS Region,
@@ -10,8 +14,7 @@ SELECT
     [Group]
 FROM Sales.SalesTerritory;
 
--- 2. Poblar Dim_Customer (Clientes individuales)
-INSERT INTO Dim_Customer (CustomerID, Customer, City, StateProvince, CountryRegion, PostalCode)
+-- 2. dimension Customer 
 SELECT 
     'AW' + RIGHT('00000000' + CAST(c.CustomerID AS VARCHAR(10)), 8) AS CustomerID,
     CONCAT(p.FirstName, ' ', p.MiddleName + ' ', p.LastName) AS Customer,
@@ -26,10 +29,89 @@ INNER JOIN Person.Address a ON bea.AddressID = a.AddressID
 INNER JOIN Person.StateProvince sp ON a.StateProvinceID = sp.StateProvinceID
 INNER JOIN Person.CountryRegion cr ON sp.CountryRegionCode = cr.CountryRegionCode;
 
+--andre calidonio 
+
+--3.dimension product
+SELECT 
+    ROW_NUMBER() OVER (ORDER BY p.ProductID, COALESCE(ch.StartDate, '1900-01-01')) + 209 AS ProductKey,
+    p.ProductNumber AS SKU,
+    p.Name AS Product,
+    COALESCE(ch.StandardCost, p.StandardCost) AS StandardCost,
+    p.Color,
+    COALESCE(ph.ListPrice, p.ListPrice) AS ListPrice,
+    pm.Name AS Model,
+    ps.Name AS Subcategory,
+    pc.Name AS Category
+FROM Production.Product p
+LEFT JOIN Production.ProductCostHistory ch ON p.ProductID = ch.ProductID
+LEFT JOIN Production.ProductListPriceHistory ph ON p.ProductID = ph.ProductID AND (ch.StartDate = ph.StartDate OR (ch.StartDate IS NULL AND ph.StartDate IS NULL))
+LEFT JOIN Production.ProductModel pm ON p.ProductModelID = pm.ProductModelID
+LEFT JOIN Production.ProductSubcategory ps ON p.ProductSubcategoryID = ps.ProductSubcategoryID
+LEFT JOIN Production.ProductCategory pc ON ps.ProductCategoryID = pc.ProductCategoryID
+WHERE ps.Name IS NOT NULL;
+
+--marcelo reyes
+
+--4. Tabla de hechos Fact Sales
+SELECT
+    sod.SalesOrderDetailID AS SalesOrderLineKey,
+    c.CustomerID AS ResellerKey,
+    c.CustomerID AS CustomerKey,
+    p.ProductID AS ProductKey,
+
+    CONVERT(INT, CONVERT(VARCHAR(8), soh.OrderDate, 112)) AS OrderDateKey,
+    CONVERT(INT, CONVERT(VARCHAR(8), soh.DueDate, 112)) AS DueDateKey,
+    CONVERT(INT, CONVERT(VARCHAR(8), soh.ShipDate, 112)) AS ShipDateKey,
+
+    st.TerritoryID AS SalesTerritoryKey,
+
+    sod.OrderQty AS OrderQuantity,
+    sod.UnitPrice,
+    sod.LineTotal AS ExtendedAmount,
+    sod.UnitPriceDiscount AS UnitPriceDiscountPct,
+    p.StandardCost AS ProductStandardCost,
+    p.StandardCost * sod.OrderQty AS TotalProductCost,
+    sod.LineTotal AS SalesAmount
+
+FROM Sales.SalesOrderHeader soh
+INNER JOIN Sales.SalesOrderDetail sod
+    ON soh.SalesOrderID = sod.SalesOrderID
+INNER JOIN Production.Product p
+    ON sod.ProductID = p.ProductID
+INNER JOIN Sales.Customer c
+    ON soh.CustomerID = c.CustomerID
+INNER JOIN Sales.SalesTerritory st
+    ON soh.TerritoryID = st.TerritoryID;
+
+-- 5. Dimensión Reseller
+SELECT
+    s.BusinessEntityID AS ResellerKey,
+    s.BusinessEntityID AS ResellerID,
+    'Reseller' AS BusinessType,
+    s.Name AS Reseller,
+    a.City,
+    sp.Name AS StateProvince,
+    cr.Name AS CountryRegion,
+    a.PostalCode
+FROM Sales.Store s
+INNER JOIN Person.BusinessEntityAddress bea
+    ON s.BusinessEntityID = bea.BusinessEntityID
+INNER JOIN Person.Address a
+    ON bea.AddressID = a.AddressID
+INNER JOIN Person.StateProvince sp
+    ON a.StateProvinceID = sp.StateProvinceID
+INNER JOIN Person.CountryRegion cr
+    ON sp.CountryRegionCode = cr.CountryRegionCode;
+
+
+
+---------------------------------
+-- Querys consultas y analisis
+---------------------------------
+
 --andre calidonio
 USE AdventureWorks2022;
 GO
-
 
 -- 5. Subcategoría donde se debe incrementar el inventario y su categoría
 SELECT TOP 1
@@ -233,58 +315,6 @@ GO
 
 
 --marcelo reyes
-
--- Dimensión Reseller
-SELECT
-    s.BusinessEntityID AS ResellerKey,
-    s.BusinessEntityID AS ResellerID,
-    'Reseller' AS BusinessType,
-    s.Name AS Reseller,
-    a.City,
-    sp.Name AS StateProvince,
-    cr.Name AS CountryRegion,
-    a.PostalCode
-FROM Sales.Store s
-INNER JOIN Person.BusinessEntityAddress bea
-    ON s.BusinessEntityID = bea.BusinessEntityID
-INNER JOIN Person.Address a
-    ON bea.AddressID = a.AddressID
-INNER JOIN Person.StateProvince sp
-    ON a.StateProvinceID = sp.StateProvinceID
-INNER JOIN Person.CountryRegion cr
-    ON sp.CountryRegionCode = cr.CountryRegionCode;
-
--- Tabla de hechos Fact Sales
-SELECT
-    sod.SalesOrderDetailID AS SalesOrderLineKey,
-    c.CustomerID AS ResellerKey,
-    c.CustomerID AS CustomerKey,
-    p.ProductID AS ProductKey,
-
-    CONVERT(INT, CONVERT(VARCHAR(8), soh.OrderDate, 112)) AS OrderDateKey,
-    CONVERT(INT, CONVERT(VARCHAR(8), soh.DueDate, 112)) AS DueDateKey,
-    CONVERT(INT, CONVERT(VARCHAR(8), soh.ShipDate, 112)) AS ShipDateKey,
-
-    st.TerritoryID AS SalesTerritoryKey,
-
-    sod.OrderQty AS OrderQuantity,
-    sod.UnitPrice,
-    sod.LineTotal AS ExtendedAmount,
-    sod.UnitPriceDiscount AS UnitPriceDiscountPct,
-    p.StandardCost AS ProductStandardCost,
-    p.StandardCost * sod.OrderQty AS TotalProductCost,
-    sod.LineTotal AS SalesAmount
-
-FROM Sales.SalesOrderHeader soh
-INNER JOIN Sales.SalesOrderDetail sod
-    ON soh.SalesOrderID = sod.SalesOrderID
-INNER JOIN Production.Product p
-    ON sod.ProductID = p.ProductID
-INNER JOIN Sales.Customer c
-    ON soh.CustomerID = c.CustomerID
-INNER JOIN Sales.SalesTerritory st
-    ON soh.TerritoryID = st.TerritoryID;
-
 -- 5. Subcategoría donde se debe incrementar el inventario y su categoría
 SELECT TOP 1
     ps.Name AS Subcategoria,
