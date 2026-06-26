@@ -108,11 +108,106 @@ INNER JOIN Person.CountryRegion cr
 ---------------------------------
 -- Querys consultas y analisis
 ---------------------------------
+--diego recinos
+
+--1a.
+--2b.
+--10j.(extra)
+--11k.(extra)
+--12l.(extra)
+
+
 
 --andre calidonio
 USE AdventureWorks2022;
 GO
+-- 3c. ¿Top 3 de países con más ventas?
+SELECT TOP 3
+    cr.Name AS Pais,
+    ROUND(SUM(sod.LineTotal), 2) AS VentasTotales,
+    SUM(sod.OrderQty) AS UnidadesVendidas
+FROM Sales.SalesOrderHeader soh
+INNER JOIN Sales.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID
+INNER JOIN Sales.SalesTerritory st ON soh.TerritoryID = st.TerritoryID
+INNER JOIN Person.CountryRegion cr ON st.CountryRegionCode = cr.CountryRegionCode
+GROUP BY 
+    cr.Name
+ORDER BY 
+    VentasTotales DESC;
+GO
 
+-- 4d. ¿Top 5 de regiones con menos ventas?
+SELECT TOP 5
+    st.Name AS Region,
+    cr.Name AS Pais,
+    ROUND(SUM(sod.LineTotal), 2) AS VentasTotales,
+    SUM(sod.OrderQty) AS UnidadesVendidas
+FROM Sales.SalesOrderHeader soh
+INNER JOIN Sales.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID
+INNER JOIN Sales.SalesTerritory st ON soh.TerritoryID = st.TerritoryID
+INNER JOIN Person.CountryRegion cr ON st.CountryRegionCode = cr.CountryRegionCode
+GROUP BY 
+    st.Name,
+    cr.Name
+ORDER BY 
+    VentasTotales ASC;
+GO
+
+-- 13m. (extra) Rentabilidad y Margen de Ganancia Promedio por Categoría y Subcategoría
+SELECT 
+    pc.Name AS Categoria,
+    ps.Name AS Subcategoria,
+    ROUND(AVG(p.ListPrice), 2) AS PrecioListaPromedio,
+    ROUND(AVG(p.StandardCost), 2) AS CostoEstandarPromedio,
+    ROUND(AVG(p.ListPrice - p.StandardCost), 2) AS GananciaUnitariaPromedio,
+    ROUND(AVG(p.ListPrice - p.StandardCost) / NULLIF(AVG(p.ListPrice), 0) * 100, 2) AS PorcentajeMargenPromedio
+FROM Production.Product p
+INNER JOIN Production.ProductSubcategory ps ON p.ProductSubcategoryID = ps.ProductSubcategoryID
+INNER JOIN Production.ProductCategory pc ON ps.ProductCategoryID = pc.ProductCategoryID
+GROUP BY 
+    pc.Name,
+    ps.Name
+ORDER BY 
+    PorcentajeMargenPromedio DESC;
+GO
+
+-- 14n (extra) Top 10 Productos con Mayor Ganancia Neta Generada
+SELECT TOP 10
+    p.Name AS Producto,
+    p.ProductNumber AS SKU,
+    SUM(sod.OrderQty) AS UnidadesVendidas,
+    ROUND(SUM(sod.LineTotal), 2) AS VentasTotales,
+    ROUND(SUM(COALESCE(ch.StandardCost, p.StandardCost) * sod.OrderQty), 2) AS CostoTotal,
+    ROUND(SUM(sod.LineTotal) - SUM(COALESCE(ch.StandardCost, p.StandardCost) * sod.OrderQty), 2) AS GananciaNeta,
+    ROUND(((SUM(sod.LineTotal) - SUM(COALESCE(ch.StandardCost, p.StandardCost) * sod.OrderQty)) / NULLIF(SUM(sod.LineTotal), 0)) * 100, 2) AS [% Margen]
+FROM Sales.SalesOrderDetail sod
+INNER JOIN Sales.SalesOrderHeader soh ON sod.SalesOrderID = soh.SalesOrderID
+INNER JOIN Production.Product p ON sod.ProductID = p.ProductID
+LEFT JOIN Production.ProductCostHistory ch ON p.ProductID = ch.ProductID 
+    AND soh.OrderDate >= ch.StartDate 
+    AND soh.OrderDate <= COALESCE(ch.EndDate, '9999-12-31')
+GROUP BY 
+    p.Name,
+    p.ProductNumber
+ORDER BY 
+    GananciaNeta DESC;
+GO
+
+-- 15o (extra) Ventas y Cantidad de Unidades Vendidas según el Color de Producto
+SELECT 
+    COALESCE(p.Color, 'Sin Color / N/A') AS ColorProducto,
+    SUM(sod.OrderQty) AS UnidadesVendidas,
+    ROUND(SUM(sod.LineTotal), 2) AS VentasTotales,
+    ROUND((SUM(sod.LineTotal) / (SELECT SUM(LineTotal) FROM Sales.SalesOrderDetail)) * 100, 2) AS PorcentajeDelTotal
+FROM Sales.SalesOrderDetail sod
+INNER JOIN Production.Product p ON sod.ProductID = p.ProductID
+GROUP BY 
+    p.Color
+ORDER BY 
+    VentasTotales DESC;
+GO
+
+---
 -- 5. Subcategoría donde se debe incrementar el inventario y su categoría
 SELECT TOP 1
     ps.Name AS Subcategoria,
@@ -315,7 +410,8 @@ GO
 
 
 --marcelo reyes
--- 5. Subcategoría donde se debe incrementar el inventario y su categoría
+
+-- 5e. Subcategoría donde se debe incrementar el inventario y su categoría
 SELECT TOP 1
     ps.Name AS Subcategoria,
     pc.Name AS Categoria,
@@ -334,7 +430,7 @@ GROUP BY
 ORDER BY 
     UnidadesVendidas DESC;
 
--- 6. Los 10 productos menos vendidos
+-- 6f. Los 10 productos menos vendidos
 SELECT TOP 10
     p.ProductID,
     p.Name AS Producto,
@@ -350,7 +446,7 @@ ORDER BY
     UnidadesVendidas ASC,
     TotalVentas ASC;
 
--- 7. Método de pago más usado
+-- 7g. Método de pago más usado
 SELECT
     CASE
         WHEN cc.CardType IS NULL THEN 'Sin tarjeta / Otro método'
@@ -365,7 +461,7 @@ GROUP BY
 ORDER BY
     CantidadTransacciones DESC;
 
--- 8 extra. Top 10 resellers con mayores ventas
+-- 8h (extra). Top 10 resellers con mayores ventas
 SELECT TOP 10
     s.BusinessEntityID AS ResellerID,
     s.Name AS Reseller,
@@ -384,7 +480,7 @@ GROUP BY
 ORDER BY 
     TotalVentas DESC;
 
--- 9 extra. Ventas por país de reseller
+-- 9i (extra). Ventas por país de reseller
 SELECT
     cr.Name AS Pais,
     ROUND(SUM(sod.LineTotal), 2) AS TotalVentas,
