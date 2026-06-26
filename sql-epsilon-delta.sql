@@ -110,12 +110,82 @@ INNER JOIN Person.CountryRegion cr
 ---------------------------------
 --diego recinos
 
---1a.
---2b.
---10j.(extra)
---11k.(extra)
---12l.(extra)
+--1a. ¿En qué mes se produjo más ventas (total de la venta) por año?
+WITH VentasPorMesAno AS (
+    SELECT 
+        YEAR(soh.OrderDate) AS Anio,
+        MONTH(soh.OrderDate) AS MesNumero,
+        DATENAME(MONTH, soh.OrderDate) AS MesNombre,
+        ROUND(SUM(sod.LineTotal), 2) AS VentasTotales,
+        ROW_NUMBER() OVER (PARTITION BY YEAR(soh.OrderDate) ORDER BY SUM(sod.LineTotal) DESC) AS Ranking
+    FROM Sales.SalesOrderHeader soh
+    INNER JOIN Sales.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID
+    GROUP BY YEAR(soh.OrderDate), MONTH(soh.OrderDate), DATENAME(MONTH, soh.OrderDate)
+)
+SELECT 
+    Anio,
+    MesNombre AS MesMasVendido,
+    VentasTotales
+FROM VentasPorMesAno
+WHERE Ranking = 1
+ORDER BY Anio DESC;
+GO
 
+--2b. ¿Año con más ventas totales?
+
+SELECT TOP 1
+    YEAR(soh.OrderDate) AS Anio,
+    ROUND(SUM(sod.LineTotal), 2) AS VentasTotales
+FROM Sales.SalesOrderHeader soh
+INNER JOIN Sales.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID
+GROUP BY YEAR(soh.OrderDate)
+ORDER BY VentasTotales DESC;
+GO
+
+--10j.(extra) ¿Canal de Distribución con mas ventas?
+SELECT 
+    CASE 
+        WHEN soh.OnlineOrderFlag = 0 THEN 'Reseller (B2B / Distribuidores)'
+        ELSE 'Internet (B2C / Venta Directa)'
+    END AS CanalDistribucion,
+    ROUND(SUM(sod.LineTotal), 2) AS VentasTotales,
+    SUM(sod.OrderQty) AS UnidadesVendidas
+FROM Sales.SalesOrderHeader soh
+INNER JOIN Sales.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID
+GROUP BY soh.OnlineOrderFlag
+ORDER BY VentasTotales DESC;
+GO
+
+--11k.(extra) ¿La categoría de productos que retiene el mayor porcentaje de margen de ganancia?
+SELECT 
+    pc.Name AS CategoriaProducto,
+    ROUND(SUM(sod.LineTotal), 2) AS VentasTotales,
+    ROUND(SUM(sod.LineTotal) - SUM(COALESCE(ch.StandardCost, p.StandardCost) * sod.OrderQty), 2) AS GananciaNeta,
+    ROUND(((SUM(sod.LineTotal) - SUM(COALESCE(ch.StandardCost, p.StandardCost) * sod.OrderQty)) / NULLIF(SUM(sod.LineTotal), 0)) * 100, 2) AS PorcentajeMargenGanancia
+FROM Sales.SalesOrderDetail sod
+INNER JOIN Sales.SalesOrderHeader soh ON sod.SalesOrderID = soh.SalesOrderID
+INNER JOIN Production.Product p ON sod.ProductID = p.ProductID
+INNER JOIN Production.ProductSubcategory ps ON p.ProductSubcategoryID = ps.ProductSubcategoryID
+INNER JOIN Production.ProductCategory pc ON ps.ProductCategoryID = pc.ProductCategoryID
+LEFT JOIN Production.ProductCostHistory ch ON p.ProductID = ch.ProductID 
+    AND soh.OrderDate >= ch.StartDate 
+    AND soh.OrderDate <= COALESCE(ch.EndDate, '9999-12-31')
+GROUP BY pc.Name
+ORDER BY PorcentajeMargenGanancia DESC;
+GO
+
+--12l.(extra) ¿Que categoria genera mas ventas ? 
+SELECT TOP 1
+    pc.Name AS CategoriaMasVendida,
+    ROUND(SUM(sod.LineTotal), 2) AS VentasTotales,
+    SUM(sod.OrderQty) AS UnidadesVendidas
+FROM Sales.SalesOrderDetail sod
+INNER JOIN Production.Product p ON sod.ProductID = p.ProductID
+INNER JOIN Production.ProductSubcategory ps ON p.ProductSubcategoryID = ps.ProductSubcategoryID
+INNER JOIN Production.ProductCategory pc ON ps.ProductCategoryID = pc.ProductCategoryID
+GROUP BY pc.Name
+ORDER BY VentasTotales DESC;
+GO
 
 
 --andre calidonio
