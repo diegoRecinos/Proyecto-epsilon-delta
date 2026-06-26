@@ -1,10 +1,12 @@
 USE AdventureWorks2022; 
 GO
---diego recinos
 
 --------------------
 --Modelo dimensional
 --------------------
+---------------
+--DIEGO RECINOS
+---------------
 
 -- 1. dimension SalesTerritory
 SELECT 
@@ -29,7 +31,9 @@ INNER JOIN Person.Address a ON bea.AddressID = a.AddressID
 INNER JOIN Person.StateProvince sp ON a.StateProvinceID = sp.StateProvinceID
 INNER JOIN Person.CountryRegion cr ON sp.CountryRegionCode = cr.CountryRegionCode;
 
---andre calidonio 
+-----------------
+--ANDRE CALIDONIO 
+-----------------
 
 --3.dimension product
 SELECT 
@@ -50,7 +54,9 @@ LEFT JOIN Production.ProductSubcategory ps ON p.ProductSubcategoryID = ps.Produc
 LEFT JOIN Production.ProductCategory pc ON ps.ProductCategoryID = pc.ProductCategoryID
 WHERE ps.Name IS NOT NULL;
 
---marcelo reyes
+---------------
+--MARCELO REYES
+---------------
 
 --4. Tabla de hechos Fact Sales
 SELECT
@@ -108,7 +114,10 @@ INNER JOIN Person.CountryRegion cr
 ---------------------------------
 -- Querys consultas y analisis
 ---------------------------------
---diego recinos
+
+---------------
+--DIEGO RECINOS
+---------------
 
 --1a. ¿En qué mes se produjo más ventas (total de la venta) por año?
 WITH VentasPorMesAno AS (
@@ -187,8 +196,9 @@ GROUP BY pc.Name
 ORDER BY VentasTotales DESC;
 GO
 
-
---andre calidonio
+------------------
+--ANDRE CALIDONIO
+------------------
 
 USE AdventureWorks2022;
 GO
@@ -278,8 +288,9 @@ ORDER BY
     VentasTotales DESC;
 GO
 
-
---marcelo reyes
+---------------
+--MARCELO REYES
+---------------
 
 -- 5e. Subcategoría donde se debe incrementar el inventario y su categoría
 SELECT TOP 1
